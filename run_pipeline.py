@@ -411,10 +411,10 @@ def initialize(checkpoint_path,
                       'pairing',
                       'sf_hotel_classification',
                       'restaurant_asc']):
-    """load the models from a path storing the checkpoints.
+    """load the models from a path storing the checkpoints_.
 
     Args:
-        checkpoint_path (str): the path to the checkpoints
+        checkpoint_path (str): the path to the checkpoints_
         use_gpu (boolean, optional): whether to use gpu
         lm (string, optional): the language model (default: bert)
         fp16 (boolean): whether to use fp16
@@ -447,7 +447,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_fn", type=str, default='trustyou_reviews_with_extractions.jsonl')
     parser.add_argument("--use_gpu", dest="use_gpu", action="store_true")
     parser.add_argument("--fp16", dest="fp16", action="store_true")
-    parser.add_argument("--checkpoint_path", type=str, default='checkpoints/')
+    parser.add_argument("--checkpoint_path", type=str, default='checkpoints_/')
     parser.add_argument("--lm", type=str, default='bert')
     parser.add_argument("--tasks", type=str, default='hotel_tagging,pairing,sf_hotel_classification,restaurant_asc')
     hp = parser.parse_args()

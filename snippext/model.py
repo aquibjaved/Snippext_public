@@ -1,13 +1,16 @@
 import torch
 import torch.nn as nn
-from transformers import BertModel, AlbertModel, DistilBertModel, RobertaModel, XLNetModel, LongformerModel
+from transformers import BertModel, AlbertModel, DistilBertModel, \
+    RobertaModel, XLNetModel, LongformerModel
 
 model_ckpts = {'bert': "bert-base-uncased",
                'albert': "albert-base-v2",
                'roberta': "roberta-base",
                'xlnet': "xlnet-base-cased",
                'distilbert': "distilbert-base-uncased",
-               'longformer': "allenai/longformer-base-4096"}
+               'longformer': "allenai/longformer-base-4096",
+               'distilbertmulti': "distilbert-base-multilingual-cased"}
+
 
 class MultiTaskNet(nn.Module):
     def __init__(self, task_configs=[],
@@ -21,7 +24,7 @@ class MultiTaskNet(nn.Module):
         assert len(task_configs) > 0
 
         # load the model or model checkpoint
-        if bert_path == None:
+        if bert_path is None:
             if lm == 'bert':
                 self.bert = BertModel.from_pretrained(model_ckpts[lm])
             elif lm == 'distilbert':
@@ -34,25 +37,30 @@ class MultiTaskNet(nn.Module):
                 self.bert = RobertaModel.from_pretrained(model_ckpts[lm])
             elif lm == 'longformer':
                 self.bert = LongformerModel.from_pretrained(model_ckpts[lm])
+            elif lm == 'distilbertmulti':
+                self.bert = DistilBertModel.from_pretrained(model_ckpts[lm])
         else:
             output_model_file = bert_path
             model_state_dict = torch.load(output_model_file,
                                           map_location=lambda storage, loc: storage)
             if lm == 'bert':
                 self.bert = BertModel.from_pretrained(model_ckpts[lm],
-                        state_dict=model_state_dict)
+                                                      state_dict=model_state_dict)
             elif lm == 'distilbert':
                 self.bert = DistilBertModel.from_pretrained(model_ckpts[lm],
-                        state_dict=model_state_dict)
+                                                            state_dict=model_state_dict)
             elif lm == 'albert':
                 self.bert = AlbertModel.from_pretrained(model_ckpts[lm],
-                        state_dict=model_state_dict)
+                                                        state_dict=model_state_dict)
             elif lm == 'xlnet':
                 self.bert = XLNetModel.from_pretrained(model_ckpts[lm],
-                        state_dict=model_state_dict)
+                                                       state_dict=model_state_dict)
             elif lm == 'roberta':
                 self.bert = RobertaModel.from_pretrained(model_ckpts[lm],
-                        state_dict=model_state_dict)
+                                                         state_dict=model_state_dict)
+            elif lm == 'distilbertmulti':
+                self.bert = DistilBertModel.from_pretrained(model_ckpts[lm],
+                                                            state_dict=model_state_dict)
 
         self.device = device
         self.finetuning = finetuning
@@ -60,7 +68,7 @@ class MultiTaskNet(nn.Module):
         self.module_dict = nn.ModuleDict({})
         self.lm = lm
 
-        # hard corded for now
+        # hard coded for now
         hidden_size = 768
         hidden_dropout_prob = 0.1
 
@@ -71,7 +79,7 @@ class MultiTaskNet(nn.Module):
 
             if task_type == 'tagging':
                 # for tagging
-                vocab_size = len(vocab) # 'O' and '<PAD>'
+                vocab_size = len(vocab)  # 'O' and '<PAD>'
                 if 'O' not in vocab:
                     vocab_size += 1
                 if '<PAD>' not in vocab:
@@ -82,7 +90,6 @@ class MultiTaskNet(nn.Module):
 
             self.module_dict['%s_dropout' % name] = nn.Dropout(hidden_dropout_prob)
             self.module_dict['%s_fc' % name] = nn.Linear(hidden_size, vocab_size)
-
 
     def forward(self, x, y,
                 augment_batch=None,
@@ -111,10 +118,10 @@ class MultiTaskNet(nn.Module):
         # move input to GPU
         x = x.to(self.device)
         y = y.to(self.device)
-        if second_batch != None:
+        if second_batch is not None:
             index, lam = second_batch
             lam = torch.tensor(lam).to(self.device)
-        if augment_batch != None:
+        if augment_batch is not None:
             aug_x, aug_lam = augment_batch
             aug_x = aug_x.to(self.device)
             aug_lam = torch.tensor(aug_lam).to(self.device)
@@ -122,7 +129,7 @@ class MultiTaskNet(nn.Module):
         dropout = self.module_dict[task + '_dropout']
         fc = self.module_dict[task + '_fc']
 
-        if 'tagging' in task: # TODO: this needs to be changed later
+        if 'tagging' in task:  # TODO: this needs to be changed later
             if self.training and self.finetuning:
                 self.bert.train()
                 if x_enc is None:
@@ -136,13 +143,13 @@ class MultiTaskNet(nn.Module):
                 with torch.no_grad():
                     enc = self.bert(x)[0]
 
-            if augment_batch != None:
+            if augment_batch is not None:
                 if aug_enc is None:
                     aug_enc = self.bert(aug_x)[0]
                 enc[:aug_x.shape[0]] *= aug_lam
                 enc[:aug_x.shape[0]] += aug_enc * (1 - aug_lam)
 
-            if second_batch != None:
+            if second_batch is not None:
                 enc = enc * lam + enc[index] * (1 - lam)
                 enc = dropout(enc)
 
@@ -168,13 +175,13 @@ class MultiTaskNet(nn.Module):
                     pooled_output = output[0][:, 0, :]
                     pooled_output = dropout(pooled_output)
 
-            if augment_batch != None:
+            if augment_batch is not None:
                 if aug_enc is None:
                     aug_enc = self.bert(aug_x)[0][:, 0, :]
                 pooled_output[:aug_x.shape[0]] *= aug_lam
                 pooled_output[:aug_x.shape[0]] += aug_enc * (1 - aug_lam)
 
-            if second_batch != None:
+            if second_batch is not None:
                 pooled_output = pooled_output * lam + pooled_output[index] * (1 - lam)
 
             logits = fc(pooled_output)

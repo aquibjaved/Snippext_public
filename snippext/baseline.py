@@ -13,7 +13,9 @@ from .dataset import *
 from .train_util import *
 from tensorboardX import SummaryWriter
 from transformers import AdamW, get_linear_schedule_with_warmup
-from apex import amp
+
+
+# from apex import amp
 
 def train(model, train_set, optimizer, scheduler=None, batch_size=32, fp16=False):
     """Perfrom one epoch of the training process.
@@ -89,9 +91,10 @@ def train(model, train_set, optimizer, scheduler=None, batch_size=32, fp16=False
             print("task_name:", taskname)
             print("=======================")
 
-        if i%10 == 0: # monitoring
+        if i % 10 == 0:  # monitoring
             print(f"step: {i}, task: {taskname}, loss: {loss.item()}")
             del loss
+
 
 def initialize_and_train(task_config,
                          trainset,
@@ -120,18 +123,18 @@ def initialize_and_train(task_config,
                                  num_workers=0,
                                  collate_fn=padder)
     test_iter = data.DataLoader(dataset=testset,
-                                 batch_size=hp.batch_size * 4,
-                                 shuffle=False,
-                                 num_workers=0,
-                                 collate_fn=padder)
+                                batch_size=hp.batch_size * 4,
+                                shuffle=False,
+                                num_workers=0,
+                                collate_fn=padder)
 
     # initialize model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = MultiTaskNet([task_config],
-                     device,
-                     hp.finetuning,
-                     lm=hp.lm,
-                     bert_path=hp.bert_path)
+                         device,
+                         hp.finetuning,
+                         lm=hp.lm,
+                         bert_path=hp.bert_path)
     if device == 'cpu':
         optimizer = AdamW(model.parameters(), lr=hp.lr)
     else:
@@ -164,14 +167,14 @@ def initialize_and_train(task_config,
 
         print(f"=========eval at epoch={epoch}=========")
         dev_f1, test_f1 = eval_on_task(epoch,
-                            model,
-                            task_config['name'],
-                            valid_iter,
-                            validset,
-                            test_iter,
-                            testset,
-                            writer,
-                            run_tag)
+                                       model,
+                                       task_config['name'],
+                                       valid_iter,
+                                       validset,
+                                       test_iter,
+                                       testset,
+                                       writer,
+                                       run_tag)
 
         if dev_f1 > 1e-6:
             epoch += 1
@@ -184,4 +187,3 @@ def initialize_and_train(task_config,
                     torch.save(model.state_dict(), run_tag + '_test.pt')
 
     writer.close()
-

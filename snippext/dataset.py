@@ -38,6 +38,9 @@ def get_tokenizer(lm='bert'):
         elif lm == 'longformer':
             from transformers import LongformerTokenizer
             tokenizer = LongformerTokenizer.from_pretrained('allenai/longformer-base-4096')
+        elif lm == 'distilbertmulti':
+            from transformers import BertTokenizer
+            tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
     return tokenizer
 
 

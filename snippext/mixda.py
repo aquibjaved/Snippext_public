@@ -26,6 +26,7 @@ classifier_criterion = nn.CrossEntropyLoss()
 # criterion for regression
 regression_criterion = nn.MSELoss()
 
+
 def mixda(model, batch, alpha_aug=0.4):
     """Perform one iteration of MixDA
 
@@ -174,10 +175,9 @@ def train(model, l_set, aug_set, optimizer,
             print("task_name:", taskname)
             print("=======================")
 
-        if i%10 == 0: # monitoring
+        if i % 10 == 0:  # monitoring
             print(f"step: {i}, task: {taskname}, loss: {loss.item()}")
             del loss
-
 
 
 def initialize_and_train(task_config,
@@ -210,21 +210,20 @@ def initialize_and_train(task_config,
                                  num_workers=0,
                                  collate_fn=padder)
     test_iter = data.DataLoader(dataset=testset,
-                                 batch_size=hp.batch_size * 4,
-                                 shuffle=False,
-                                 num_workers=0,
-                                 collate_fn=padder)
-
+                                batch_size=hp.batch_size * 4,
+                                shuffle=False,
+                                num_workers=0,
+                                collate_fn=padder)
 
     # initialize model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if device == 'cpu':
         model = MultiTaskNet([task_config], device,
-                         hp.finetuning, lm=hp.lm, bert_path=hp.bert_path)
+                             hp.finetuning, lm=hp.lm, bert_path=hp.bert_path)
         optimizer = AdamW(model.parameters(), lr=hp.lr)
     else:
         model = MultiTaskNet([task_config], device,
-                         hp.finetuning, lm=hp.lm, bert_path=hp.bert_path).cuda()
+                             hp.finetuning, lm=hp.lm, bert_path=hp.bert_path).cuda()
         optimizer = AdamW(model.parameters(), lr=hp.lr)
         if hp.fp16:
             model, optimizer = amp.initialize(model, optimizer, opt_level='O2')
@@ -254,14 +253,14 @@ def initialize_and_train(task_config,
 
         print(f"=========eval at epoch={epoch}=========")
         dev_f1, test_f1 = eval_on_task(epoch,
-                            model,
-                            task_config['name'],
-                            valid_iter,
-                            validset,
-                            test_iter,
-                            testset,
-                            writer,
-                            run_tag)
+                                       model,
+                                       task_config['name'],
+                                       valid_iter,
+                                       validset,
+                                       test_iter,
+                                       testset,
+                                       writer,
+                                       run_tag)
 
         # skip the epochs with zero f1
         if dev_f1 > 1e-6:
@@ -275,4 +274,3 @@ def initialize_and_train(task_config,
                     torch.save(model.state_dict(), run_tag + '_test.pt')
 
     writer.close()
-
